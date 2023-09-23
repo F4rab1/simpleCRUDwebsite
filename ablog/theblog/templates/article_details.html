@@ -7,8 +7,8 @@
 <a href="{% url 'home' %}" class="btn btn-secondary">Back to Home page</a>
 <br></br>
 <h1>{{ post.title }}</h1>
-By: {{ post.author.first_name }} {{ post.author.last_name }} - <a href="{% url 'update_post' post.pk %}">(Edit)</a> 
-<a href="{% url 'delete_post' post.pk %}">(Delete)</a>
+By: {{ post.author.first_name }} {{ post.author.last_name }} - <a href="{% url 'update_post' post.pk %}" class="btn btn-warning">Edit</a> 
+<a href="{% url 'delete_post' post.pk %}" class="btn btn-danger">Delete</a>
 <br/>
 <hr>
 <br/>
