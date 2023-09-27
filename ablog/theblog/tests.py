@@ -65,55 +65,118 @@ from django.contrib.auth.models import User
 
 # -------------Integration testing------------
 
-class BlogCRUDIntegrationTestCase(TestCase):
+# class BlogCRUDIntegrationTestCase(TestCase):
+
+#     def setUp(self):
+#         # Created a user for testing
+#         self.user = User.objects.create_user(
+#             username='testuser',
+#             password='testIsaF2004',
+#         )
+
+#     def test_blog_crud_workflow(self):
+#         self.client.login(username='testuser', password='testIsaF2004')
+
+#         # Created a post
+#         create_url = reverse('add_post')
+#         create_data = {
+#             'title': 'New Test Post',
+#             'title_tag': 'New Test Tag',
+#             'author': self.user.id,
+#             'body': 'This is a new test post content'
+#         }
+#         response = self.client.post(create_url, create_data)
+#         self.assertEqual(response.status_code, 302)  # Expecting a redirect
+#         self.assertEqual(Post.objects.count(), 1)  # Check that the total number of posts has increased
+
+#         # Retrieved the created post
+#         created_post = Post.objects.first()
+#         self.assertEqual(created_post.title, 'New Test Post')
+#         self.assertEqual(created_post.title_tag, 'New Test Tag')
+#         self.assertEqual(created_post.author, self.user)
+#         self.assertEqual(created_post.body, 'This is a new test post content')
+
+#         # Updated the post
+#         update_url = reverse('update_post', args=[created_post.id])
+#         updated_data = {
+#             'title': 'Updated Test Post',
+#             'title_tag': 'Updated Test Tag',
+#             'body': 'Updated test post content'
+#         }
+#         response = self.client.post(update_url, updated_data)
+#         self.assertEqual(response.status_code, 302)  # Expecting a redirect
+#         created_post.refresh_from_db()
+#         self.assertEqual(created_post.title, 'Updated Test Post')
+#         self.assertEqual(created_post.title_tag, 'Updated Test Tag')
+#         self.assertEqual(created_post.body, 'Updated test post content')
+
+#         # Delete the post
+#         delete_url = reverse('delete_post', args=[created_post.id])
+#         response = self.client.post(delete_url)
+#         self.assertEqual(response.status_code, 302)  # Expecting a redirect
+#         self.assertFalse(Post.objects.filter(pk=created_post.id).exists())
+
+# -------------------------------------------------------------
+
+# -------------------Smoke testing------------------------------------------
+
+class SmokeTest(TestCase):
 
     def setUp(self):
-        # Created a user for testing
-        self.user = User.objects.create_user(
-            username='testuser',
-            password='testIsaF2004',
-        )
+        self.user = User.objects.create_user(username='testuser', password='testpassword')
 
-    def test_blog_crud_workflow(self):
-        self.client.login(username='testuser', password='testIsaF2004')
+    def test_homepage(self):
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Blogs')  
 
-        # Created a post
-        create_url = reverse('add_post')
-        create_data = {
+    def test_create_post(self):
+        self.client.login(username='testuser', password='testpassword')
+        
+        response = self.client.post(reverse('add_post'), {
             'title': 'New Test Post',
             'title_tag': 'New Test Tag',
             'author': self.user.id,
-            'body': 'This is a new test post content'
-        }
-        response = self.client.post(create_url, create_data)
-        self.assertEqual(response.status_code, 302)  # Expecting a redirect
-        self.assertEqual(Post.objects.count(), 1)  # Check that the total number of posts has increased
+            'body': 'This is new test post',
+        })
+        
+        self.assertEqual(response.status_code, 302)  # Expecting a redirect after creating a post
+        self.assertTrue(Post.objects.filter(title='New Test Post').exists())
 
-        # Retrieved the created post
-        created_post = Post.objects.first()
-        self.assertEqual(created_post.title, 'New Test Post')
-        self.assertEqual(created_post.title_tag, 'New Test Tag')
-        self.assertEqual(created_post.author, self.user)
-        self.assertEqual(created_post.body, 'This is a new test post content')
-
-        # Updated the post
-        update_url = reverse('update_post', args=[created_post.id])
-        updated_data = {
+    def test_edit_post(self):
+        post = Post.objects.create(
+            title='Test Post',
+            title_tag='Test Tag',
+            author=self.user,
+            body='This is a test post content',
+        )
+        
+        self.client.login(username='testuser', password='testpassword')
+        
+        response = self.client.post(reverse('update_post', args=[post.pk]), {
             'title': 'Updated Test Post',
             'title_tag': 'Updated Test Tag',
-            'body': 'Updated test post content'
-        }
-        response = self.client.post(update_url, updated_data)
-        self.assertEqual(response.status_code, 302)  # Expecting a redirect
-        created_post.refresh_from_db()
-        self.assertEqual(created_post.title, 'Updated Test Post')
-        self.assertEqual(created_post.title_tag, 'Updated Test Tag')
-        self.assertEqual(created_post.body, 'Updated test post content')
+            'body': 'This is an updated test post content',
+        })
+        
+        self.assertEqual(response.status_code, 302)  # Expecting a redirect after editing a post
+        post.refresh_from_db()
+        self.assertEqual(post.title, 'Updated Test Post')
 
-        # Delete the post
-        delete_url = reverse('delete_post', args=[created_post.id])
-        response = self.client.post(delete_url)
-        self.assertEqual(response.status_code, 302)  # Expecting a redirect
-        self.assertFalse(Post.objects.filter(pk=created_post.id).exists())
+    def test_delete_post(self):
+    
+        post = Post.objects.create(
+            title='Test Post to Delete',
+            title_tag='Test Tag',
+            author=self.user,
+            body='This is a test post content to delete',
+        )   
+        
+        self.client.login(username='testuser', password='testpassword')
+    
+        response = self.client.post(reverse('delete_post', args=[post.pk]))
+    
+        self.assertEqual(response.status_code, 302)  # Expecting a redirect after deleting a post
+        self.assertFalse(Post.objects.filter(title='Test Post to Delete').exists())
 
 
