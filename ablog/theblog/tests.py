@@ -120,63 +120,136 @@ from django.contrib.auth.models import User
 
 # -------------------Smoke testing------------------------------------------
 
-class SmokeTest(TestCase):
+# class SmokeTest(TestCase):
 
+#     def setUp(self):
+#         self.user = User.objects.create_user(username='testuser', password='testpassword')
+
+#     def test_homepage(self):
+#         response = self.client.get(reverse('home'))
+#         self.assertEqual(response.status_code, 200)
+#         self.assertContains(response, 'Blogs')  
+
+#     def test_create_post(self):
+#         self.client.login(username='testuser', password='testpassword')
+        
+#         response = self.client.post(reverse('add_post'), {
+#             'title': 'New Test Post',
+#             'title_tag': 'New Test Tag',
+#             'author': self.user.id,
+#             'body': 'This is new test post',
+#         })
+        
+#         self.assertEqual(response.status_code, 302)  # Expecting a redirect after creating a post
+#         self.assertTrue(Post.objects.filter(title='New Test Post').exists())
+
+#     def test_edit_post(self):
+#         post = Post.objects.create(
+#             title='Test Post',
+#             title_tag='Test Tag',
+#             author=self.user,
+#             body='This is a test post content',
+#         )
+        
+#         self.client.login(username='testuser', password='testpassword')
+        
+#         response = self.client.post(reverse('update_post', args=[post.pk]), {
+#             'title': 'Updated Test Post',
+#             'title_tag': 'Updated Test Tag',
+#             'body': 'This is an updated test post content',
+#         })
+        
+#         self.assertEqual(response.status_code, 302)  # Expecting a redirect after editing a post
+#         post.refresh_from_db()
+#         self.assertEqual(post.title, 'Updated Test Post')
+
+#     def test_delete_post(self):
+    
+#         post = Post.objects.create(
+#             title='Test Post to Delete',
+#             title_tag='Test Tag',
+#             author=self.user,
+#             body='This is a test post content to delete',
+#         )   
+        
+#         self.client.login(username='testuser', password='testpassword')
+    
+#         response = self.client.post(reverse('delete_post', args=[post.pk]))
+    
+#         self.assertEqual(response.status_code, 302)  # Expecting a redirect after deleting a post
+#         self.assertFalse(Post.objects.filter(title='Test Post to Delete').exists())
+
+# ---------------------------------------------------------------
+
+# ----------------Database testing-----------------------------
+
+class BlogCRUDTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
-
-    def test_homepage(self):
-        response = self.client.get(reverse('home'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Blogs')  
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpassword',
+        )
 
     def test_create_post(self):
         self.client.login(username='testuser', password='testpassword')
-        
+
         response = self.client.post(reverse('add_post'), {
             'title': 'New Test Post',
             'title_tag': 'New Test Tag',
             'author': self.user.id,
-            'body': 'This is new test post',
+            'body': 'This is a new test post content',
         })
-        
-        self.assertEqual(response.status_code, 302)  # Expecting a redirect after creating a post
-        self.assertTrue(Post.objects.filter(title='New Test Post').exists())
 
-    def test_edit_post(self):
+        self.assertEqual(response.status_code, 302)  # Check for a successful redirect after creating a post
+        self.assertTrue(Post.objects.filter(title='New Test Post').exists())  # Check that the post was created in the database
+
+    def test_read_post(self):
         post = Post.objects.create(
             title='Test Post',
             title_tag='Test Tag',
             author=self.user,
             body='This is a test post content',
         )
-        
+
+        response = self.client.get(reverse('article-detail', args=[post.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Test Post')
+        self.assertContains(response, 'This is a test post content')
+
+    def test_update_post(self):
         self.client.login(username='testuser', password='testpassword')
-        
-        response = self.client.post(reverse('update_post', args=[post.pk]), {
-            'title': 'Updated Test Post',
-            'title_tag': 'Updated Test Tag',
-            'body': 'This is an updated test post content',
+
+        post = Post.objects.create(
+            title='Test Post',
+            title_tag='Test Tag',
+            author=self.user,
+            body='This is a test post content',
+        )
+
+        updated_title = 'Updated Test Post'
+        updated_body = 'This is an updated test post content'
+        response = self.client.post(reverse('update_post', args=[post.id]), {
+            'title': updated_title,
+            'title_tag': 'Test Tag',  
+            'body': updated_body,
         })
-        
-        self.assertEqual(response.status_code, 302)  # Expecting a redirect after editing a post
-        post.refresh_from_db()
-        self.assertEqual(post.title, 'Updated Test Post')
+
+        self.assertEqual(response.status_code, 302)  # Check for a successful redirect after updating a post
+        post.refresh_from_db()  # Refresh the post instance from the database
+        self.assertEqual(post.title, updated_title)  # Check if the post was updated in the database
+        self.assertEqual(post.body, updated_body)
 
     def test_delete_post(self):
-    
+        self.client.login(username='testuser', password='testpassword')
+
         post = Post.objects.create(
             title='Test Post to Delete',
             title_tag='Test Tag',
             author=self.user,
             body='This is a test post content to delete',
-        )   
-        
-        self.client.login(username='testuser', password='testpassword')
-    
-        response = self.client.post(reverse('delete_post', args=[post.pk]))
-    
-        self.assertEqual(response.status_code, 302)  # Expecting a redirect after deleting a post
-        self.assertFalse(Post.objects.filter(title='Test Post to Delete').exists())
+        )
 
+        response = self.client.post(reverse('delete_post', args=[post.id]))
+        self.assertEqual(response.status_code, 302)  # Check for a successful redirect after deleting a post
+        self.assertFalse(Post.objects.filter(title='Test Post to Delete').exists()) # Check if the post was deleted in the database
 
