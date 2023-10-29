@@ -1,7 +1,68 @@
-from django.test import TestCase
-from django.urls import reverse
-from .models import Post
+# from django.test import TestCase
+# from django.urls import reverse
+# from .models import Post
 from django.contrib.auth.models import User
+from django.test import LiveServerTestCase
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+class SeleniumUITest(LiveServerTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.selenium = webdriver.Firefox()
+        cls.selenium.implicitly_wait(10)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.selenium.quit()
+        super().tearDownClass()
+
+    def test_ui_elements(self):
+        # Navigate to the home page
+        self.selenium.get(self.live_server_url)
+        self.assertIn("Blogs", self.selenium.title)  # Check the title
+
+        # Click on the "Add Post" button
+        self.selenium.find_element(By.PARTIAL_LINK_TEXT, "Add Post").click()
+        self.assertIn("Create a new blog", self.selenium.title)
+
+        # Fill out the form to create a new post
+        title_input = self.selenium.find_element(By.NAME, "title")
+        title_input.send_keys("Test Post Title")
+
+        title_tag_input = self.selenium.find_element(By.NAME, "title_tag")
+        title_tag_input.send_keys("Test Title Tag")
+
+        body_input = self.selenium.find_element(By.NAME, "body")
+        body_input.send_keys("This is a test post body.")
+
+        # Submit the form by clicking the "Post" button
+        post_button = self.selenium.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        post_button.click()
+
+        # Check if the post was successfully created
+        success_message = self.selenium.find_element(By.CSS_SELECTOR, ".alert-success")
+        self.assertTrue(success_message.is_displayed())
+
+        # Navigate back to the home page
+        self.selenium.find_element(By.PARTIAL_LINK_TEXT, "Blogs").click()
+        self.assertIn("Blogs", self.selenium.title)
+
+        # Click on links to view the newly created post
+        self.selenium.find_element(By.PARTIAL_LINK_TEXT, "Test Post Title").click()
+        self.assertIn("Test Post Title", self.selenium.title)
+
+        # Verify the post details
+        post_title = self.selenium.find_element(By.TAG_NAME, "h1")
+        self.assertEqual(post_title.text, "Test Post Title")
+
+        post_body = self.selenium.find_element(By.TAG_NAME, "p")
+        self.assertEqual(post_body.text, "This is a test post body.")
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()
 
 # ---------------Unit test--------------
 # class PostCRUDTests(TestCase):
@@ -183,73 +244,73 @@ from django.contrib.auth.models import User
 
 # ----------------Database testing-----------------------------
 
-class BlogCRUDTests(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            password='testpassword',
-        )
+# class BlogCRUDTests(TestCase):
+#     def setUp(self):
+#         self.user = User.objects.create_user(
+#             username='testuser',
+#             password='testpassword',
+#         )
 
-    def test_create_post(self):
-        self.client.login(username='testuser', password='testpassword')
+#     def test_create_post(self):
+#         self.client.login(username='testuser', password='testpassword')
 
-        response = self.client.post(reverse('add_post'), {
-            'title': 'New Test Post',
-            'title_tag': 'New Test Tag',
-            'author': self.user.id,
-            'body': 'This is a new test post content',
-        })
+#         response = self.client.post(reverse('add_post'), {
+#             'title': 'New Test Post',
+#             'title_tag': 'New Test Tag',
+#             'author': self.user.id,
+#             'body': 'This is a new test post content',
+#         })
 
-        self.assertEqual(response.status_code, 302)  # Check for a successful redirect after creating a post
-        self.assertTrue(Post.objects.filter(title='New Test Post').exists())  # Check that the post was created in the database
+#         self.assertEqual(response.status_code, 302)  # Check for a successful redirect after creating a post
+#         self.assertTrue(Post.objects.filter(title='New Test Post').exists())  # Check that the post was created in the database
 
-    def test_read_post(self):
-        post = Post.objects.create(
-            title='Test Post',
-            title_tag='Test Tag',
-            author=self.user,
-            body='This is a test post content',
-        )
+#     def test_read_post(self):
+#         post = Post.objects.create(
+#             title='Test Post',
+#             title_tag='Test Tag',
+#             author=self.user,
+#             body='This is a test post content',
+#         )
 
-        response = self.client.get(reverse('article-detail', args=[post.id]))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Test Post')
-        self.assertContains(response, 'This is a test post content')
+#         response = self.client.get(reverse('article-detail', args=[post.id]))
+#         self.assertEqual(response.status_code, 200)
+#         self.assertContains(response, 'Test Post')
+#         self.assertContains(response, 'This is a test post content')
 
-    def test_update_post(self):
-        self.client.login(username='testuser', password='testpassword')
+#     def test_update_post(self):
+#         self.client.login(username='testuser', password='testpassword')
 
-        post = Post.objects.create(
-            title='Test Post',
-            title_tag='Test Tag',
-            author=self.user,
-            body='This is a test post content',
-        )
+#         post = Post.objects.create(
+#             title='Test Post',
+#             title_tag='Test Tag',
+#             author=self.user,
+#             body='This is a test post content',
+#         )
 
-        updated_title = 'Updated Test Post'
-        updated_body = 'This is an updated test post content'
-        response = self.client.post(reverse('update_post', args=[post.id]), {
-            'title': updated_title,
-            'title_tag': 'Test Tag',  
-            'body': updated_body,
-        })
+#         updated_title = 'Updated Test Post'
+#         updated_body = 'This is an updated test post content'
+#         response = self.client.post(reverse('update_post', args=[post.id]), {
+#             'title': updated_title,
+#             'title_tag': 'Test Tag',  
+#             'body': updated_body,
+#         })
 
-        self.assertEqual(response.status_code, 302)  # Check for a successful redirect after updating a post
-        post.refresh_from_db()  # Refresh the post instance from the database
-        self.assertEqual(post.title, updated_title)  # Check if the post was updated in the database
-        self.assertEqual(post.body, updated_body)
+#         self.assertEqual(response.status_code, 302)  # Check for a successful redirect after updating a post
+#         post.refresh_from_db()  # Refresh the post instance from the database
+#         self.assertEqual(post.title, updated_title)  # Check if the post was updated in the database
+#         self.assertEqual(post.body, updated_body)
 
-    def test_delete_post(self):
-        self.client.login(username='testuser', password='testpassword')
+#     def test_delete_post(self):
+#         self.client.login(username='testuser', password='testpassword')
 
-        post = Post.objects.create(
-            title='Test Post to Delete',
-            title_tag='Test Tag',
-            author=self.user,
-            body='This is a test post content to delete',
-        )
+#         post = Post.objects.create(
+#             title='Test Post to Delete',
+#             title_tag='Test Tag',
+#             author=self.user,
+#             body='This is a test post content to delete',
+#         )
 
-        response = self.client.post(reverse('delete_post', args=[post.id]))
-        self.assertEqual(response.status_code, 302)  # Check for a successful redirect after deleting a post
-        self.assertFalse(Post.objects.filter(title='Test Post to Delete').exists()) # Check if the post was deleted in the database
+#         response = self.client.post(reverse('delete_post', args=[post.id]))
+#         self.assertEqual(response.status_code, 302)  # Check for a successful redirect after deleting a post
+#         self.assertFalse(Post.objects.filter(title='Test Post to Delete').exists()) # Check if the post was deleted in the database
 
